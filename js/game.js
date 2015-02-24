@@ -95,32 +95,20 @@ function init(){
       }
     } );
     //loading the background
-    var bgTexture = PIXI.Texture.fromImage("img/desert-bg.jpg");
-    bg = new PIXI.Sprite(bgTexture);
-    bg.position.x = 0;
-    bg.position.y = 0;
+    bg = createSprite("img/desert-bg.jpg", 0, 0);
 
     //add the character
-    var character = PIXI.Texture.fromImage("img/character_1_stand.png");
-    char = new PIXI.Sprite(character);
-    char.position.x = 0;
-    char.position.y = 0;
+    char = createSprite("img/character_1_stand.png", 0, 0);
 
     //add the text
-    var introText = PIXI.Texture.fromImage("img/intro-text.png");
-    text = new PIXI.Sprite(introText);
-    text.position.x = 0;
-    text.position.y = 0;
+    text = createSprite("img/intro-text.png", 0, 0);
 
     //add the button
-    var startButton = PIXI.Texture.fromImage("img/start-button.png");
-    button = new PIXI.Sprite(startButton);
-    button.position.x = 100;
-    button.position.y = 500;
-
+    button = createSprite("img/start-button.png", 100, 500);
     // make the button interactive..
     button.interactive = true;
 
+    //event listeners for the button
     button.click = function(data) {
         prepareGame();
     };
@@ -129,6 +117,13 @@ function init(){
     };
 
     prepareStage();
+  }
+
+  function createSprite(path, x, y){
+    var sprite = PIXI.Sprite.fromImage(path);
+    sprite.x = x;
+    sprite.y = y;
+    return sprite;
   }
 
   function drawWord(word){
