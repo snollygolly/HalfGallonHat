@@ -34,6 +34,8 @@ var currentCharState;
 var playerAlive = true;
 //which round the player is on
 var currentRound = 0;
+//the players score
+var currentScore = 0;
 
 // create an array of assets to load
 var assetsToLoader = [
@@ -230,6 +232,7 @@ function init(){
   function resetGame(){
     //to get a blank slate after being init-ed
     currentRound = 0;
+    currentScore = 0;
   }
 
   function startGame(){
@@ -274,11 +277,12 @@ function init(){
         break;
       case "spent":
         //player is dead, cpu is smoking a cig
-        showMessage("You're Dead!\nPress enter to try again");
+        showMessage("You're Dead! Score: " + currentScore + "\nPress enter to try again");
         playerAlive = false;
         break;
       case "dead":
         showMessage("Nice Shot!\nPress enter for your next duel");
+        currentScore += currentWordArr.length + currentRound;
         break;
     }
     rS( 'render' ).start();
