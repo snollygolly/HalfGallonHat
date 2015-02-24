@@ -9,18 +9,37 @@ var words = ["BUCKAROO", "CHUCK WAGON"];
 var currentWordArr = [];
 var finishedWordArr = [];
 
+//the draw time is the amount of time between the creation of the word
+//and the time the cpu char beings to draw his weapon
+var TIMER_DRAW_LOW = 250;
+var TIMER_DRAW_HIGH = 650;
+//word complete timer is the amount of time it takes the cpu char to shoot
+//after he has begun to draw his weapon
+var TIMER_WORD_COMPLETE = 150;
+
+//the current timer
+var currentCharTimer;
+//which phase of the draw state is the cpu char in?
+//Idle, Drawing, Spent, Dead
+var currentCharState;
+//live or dead
+var playerAlive = true;
+
 // create an array of assets to load
 var assetsToLoader = [
   "img/letters/yellow-letters.json",
-  "img/letters/solid-letters.json",
-  "img/characters/sheet_shirts.json"
+  "img/letters/solid-letters.json"
 ];
 
 var letters = [];
+var messages = [];
 var letterContainer = new PIXI.DisplayObjectContainer();
+var messageContainer = new PIXI.DisplayObjectContainer();
 // create an empty container
 letterContainer.position.x = 0;
 letterContainer.position.y = 0;
+messageContainer.position.x = 0;
+messageContainer.position.y = 0;
 
 
 
@@ -90,6 +109,9 @@ function init(){
   loader.load();
 
   stage.addChild(letterContainer);
+  stage.addChild(messageContainer);
+
+  requestAnimationFrame(animate);
 
   function onAssetsLoaded(){
     console.log("all assets loaded");
@@ -122,8 +144,7 @@ function init(){
 
   function createLetter(letterChar, x){
     console.log("creating letter with: " + letterChar + " @ x: " + x);
-    //var letter = PIXI.Sprite.fromFrame(letterChar + ".png");
-    var letter = PIXI.Sprite.fromFrame("greenShirt6.png")
+    var letter = PIXI.Sprite.fromFrame(letterChar + ".png");
     letter.width = letter.height = TRUE_LETTER_SIZE;
     letter.position.x = x;
     letter.position.y = 700;
@@ -141,6 +162,10 @@ function init(){
   }
 
   function handleInput(key){
+    //if the CPU char hasn't started to shoot, don't type
+    if (currentCharState != "drawing"){
+      return;
+    }
     var char = String.fromCharCode(key).toUpperCase();
     if (char == " "){
       //trap the space
@@ -155,12 +180,10 @@ function init(){
     if (currentWordArr.length == finishedWordArr.length){
       //they've matched the entire word
       console.log("clearing word");
-      clearWord();
-      startGame();
+      currentCharState = "dead";
     }
   }
 
-  requestAnimationFrame(animate);
 
   function prepareGame(){
     stage.removeChild(button);
@@ -174,13 +197,64 @@ function init(){
     finishedWordArr = [];
     letters = [];
     drawWord(words[getRandomInt(0, words.length - 1)]);
+    //set up a random time for the draw timer
+    currentCharTimer = getRandomInt(TIMER_DRAW_LOW, TIMER_DRAW_HIGH);
+    currentCharState = "idle";
+    playerAlive = true;
   }
 
   function animate() {
+    switch (currentCharState){
+      case "idle":
+        if (currentCharTimer <= 0){
+          //they should draw now!
+          showMessage("Draw!");
+          currentCharTimer = TIMER_WORD_COMPLETE;
+          currentCharState = "drawing";
+        }else{
+          currentCharTimer--;
+        }
+        break;
+      case "drawing":
+        if (currentCharTimer <= 0){
+          showMessage("Bang!");
+          //they should shoot now
+          currentCharState = "spent";
+        }else{
+          currentCharTimer--;
+        }
+        break;
+      case "spent":
+        //player is dead, cpu is smoking a cig
+        showMessage("You're dead!");
+        playerAlive = false;
+        break;
+      case "dead":
+        showMessage("Nice Shot!");
+        break;
+    }
+    console.log("animate tick: " + currentCharState + " - " + currentCharTimer);
+    renderer.render(stage);
+    requestAnimationFrame(animate);
+  }
 
-      renderer.render(stage);
+  function showMessage(message){
+    clearMessage();
+    var msg = new PIXI.Text(message, {
+      font: "50px Arial",
+      fill: "black"
+    });
+    msg.position.x = 100;
+    msg.position.y = 500;
+    messages.push(msg);
+    messageContainer.addChild(msg);
+  }
 
-      requestAnimationFrame(animate);
+  function clearMessage(){
+    while (messages.length != 0){
+      var message = messages.pop();
+      messageContainer.removeChild(message);
+    }
   }
 
   function getRandomInt(min, max) {
