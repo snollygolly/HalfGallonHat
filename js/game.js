@@ -40,7 +40,11 @@ var currentScore = 0;
 // create an array of assets to load
 var assetsToLoader = [
   "img/letters/yellow-letters.json",
-  "img/letters/solid-letters.json"
+  "img/letters/solid-letters.json",
+  "img/desert-bg.jpg",
+  "img/character_1_stand.png",
+  "img/intro-text.png",
+  "img/start-button.png"
 ];
 
 var letters = [];
