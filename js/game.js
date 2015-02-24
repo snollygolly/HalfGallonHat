@@ -1,4 +1,4 @@
-// You can use either PIXI.WebGLRenderer or PIXI.CanvasRenderer
+var FPS = 30;
 var WIDTH = 1024;
 var HEIGHT = 768;
 var LETTER_SIZE = 258;
@@ -9,13 +9,21 @@ var words = ["BUCKAROO", "CHUCK WAGON"];
 var currentWordArr = [];
 var finishedWordArr = [];
 
+//all time in MS
 //the draw time is the amount of time between the creation of the word
 //and the time the cpu char beings to draw his weapon
-var TIMER_DRAW_LOW = 250;
-var TIMER_DRAW_HIGH = 650;
+var X_TIMER_DRAW_LOW = 1500;
+var X_TIMER_DRAW_HIGH = 3000;
 //word complete timer is the amount of time it takes the cpu char to shoot
 //after he has begun to draw his weapon
-var TIMER_WORD_COMPLETE = 150;
+var X_TIMER_WORD_COMPLETE = 3000;
+
+//how many ms are in one frame?
+var FRAME_TO_MS = 1000 / FPS;
+//automatically convert, don't touch
+var TIMER_DRAW_LOW = Math.ceil(X_TIMER_DRAW_LOW / FRAME_TO_MS);
+var TIMER_DRAW_HIGH = Math.ceil(X_TIMER_DRAW_HIGH / FRAME_TO_MS);
+var TIMER_WORD_COMPLETE = Math.ceil(X_TIMER_WORD_COMPLETE / FRAME_TO_MS);
 
 //the current timer
 var currentCharTimer;
@@ -24,6 +32,8 @@ var currentCharTimer;
 var currentCharState;
 //live or dead
 var playerAlive = true;
+//which round the player is on
+var currentRound = 0;
 
 // create an array of assets to load
 var assetsToLoader = [
@@ -41,13 +51,14 @@ letterContainer.position.y = 0;
 messageContainer.position.x = 0;
 messageContainer.position.y = 0;
 
-
+//the main animator
+var animator;
 
 function init(){
   $(function() {
     $(window).keypress(function(e) {
         var code = e.which;
-        if (((code >= 65) && (code <= 90)) || ((code >= 97) && (code <= 122)) || code == 32) {
+        if (((code >= 65) && (code <= 90)) || ((code >= 97) && (code <= 122)) || code == 32 || code == 13) {
           handleInput(code);
         }
     });
@@ -59,46 +70,6 @@ function init(){
 
   stage = new PIXI.Stage;
 
-  //loading the background
-  var bgTexture = PIXI.Texture.fromImage("img/desert-bg.jpg");
-  bg = new PIXI.Sprite(bgTexture);
-  bg.position.x = 0;
-  bg.position.y = 0;
-  stage.addChild(bg);
-
-  //add the character
-  var character = PIXI.Texture.fromImage("img/character_1_stand.png");
-  char = new PIXI.Sprite(character);
-  char.position.x = 0;
-  char.position.y = 0;
-  stage.addChild(char);
-
-  //add the text
-  var introText = PIXI.Texture.fromImage("img/intro-text.png");
-  text = new PIXI.Sprite(introText);
-  text.position.x = 0;
-  text.position.y = 0;
-  stage.addChild(text);
-
-  //add the button
-  var startButton = PIXI.Texture.fromImage("img/start-button.png");
-  button = new PIXI.Sprite(startButton);
-  button.position.x = 100;
-  button.position.y = 500;
-  stage.addChild(button);
-
-  // make the button interactive..
-  button.interactive = true;
-
-  button.click = function(data) {
-      console.log("CLICK!");
-      prepareGame();
-  };
-  button.tap = function(data) {
-      console.log("TAP!!");
-      prepareGame();
-  };
-
   // create a new loader
   loader = new PIXI.AssetLoader(assetsToLoader);
 
@@ -108,13 +79,52 @@ function init(){
   //begin load
   loader.load();
 
-  stage.addChild(letterContainer);
-  stage.addChild(messageContainer);
-
-  requestAnimationFrame(animate);
-
   function onAssetsLoaded(){
     console.log("all assets loaded");
+    rS = new rStats( {
+      values: {
+          frame: { caption: 'Total frame time (ms)' },
+          fps: { caption: 'Framerate (FPS)' },
+          render: { caption: 'WebGL Render (ms)' }
+      }
+    } );
+    //loading the background
+    var bgTexture = PIXI.Texture.fromImage("img/desert-bg.jpg");
+    bg = new PIXI.Sprite(bgTexture);
+    bg.position.x = 0;
+    bg.position.y = 0;
+
+    //add the character
+    var character = PIXI.Texture.fromImage("img/character_1_stand.png");
+    char = new PIXI.Sprite(character);
+    char.position.x = 0;
+    char.position.y = 0;
+
+    //add the text
+    var introText = PIXI.Texture.fromImage("img/intro-text.png");
+    text = new PIXI.Sprite(introText);
+    text.position.x = 0;
+    text.position.y = 0;
+
+    //add the button
+    var startButton = PIXI.Texture.fromImage("img/start-button.png");
+    button = new PIXI.Sprite(startButton);
+    button.position.x = 100;
+    button.position.y = 500;
+
+    // make the button interactive..
+    button.interactive = true;
+
+    button.click = function(data) {
+        console.log("CLICK!");
+        prepareGame();
+    };
+    button.tap = function(data) {
+        console.log("TAP!!");
+        prepareGame();
+    };
+
+    prepareStage();
   }
 
   function drawWord(word){
@@ -163,6 +173,22 @@ function init(){
 
   function handleInput(key){
     //if the CPU char hasn't started to shoot, don't type
+    console.log("input: key: " + key + " - state: " + currentCharState);
+    //space trapping for menu stuff
+    if (currentCharState == "spent" && key == 13){
+      resetGame();
+      startGame();
+      return;
+    }
+    if (currentCharState == "dead" && key == 13){
+      startGame();
+      return;
+    }
+    //enter doesn't get trapped normally
+    if (key == 13){
+      return;
+    }
+    //anything else is something we don't care about
     if (currentCharState != "drawing"){
       return;
     }
@@ -184,15 +210,39 @@ function init(){
     }
   }
 
+  function prepareStage(){
+    //used to set the main menu
+    stage.addChild(bg);
+    stage.addChild(char);
+    stage.addChild(text);
+    stage.addChild(button);
+    //add the containers
+    stage.addChild(letterContainer);
+    stage.addChild(messageContainer);
+    //draw it on the stage
+    renderer.render(stage);
+  }
 
   function prepareGame(){
+    //to be used when entering the game from the main menu
     stage.removeChild(button);
     stage.removeChild(text);
-
+    //just in case
+    clearInterval(animator);
+    animator = setInterval(animate, FPS);
+    console.log("set animator");
+    resetGame();
     startGame();
   }
 
+  function resetGame(){
+    //to get a blank slate after being init-ed
+    currentRound = 0;
+  }
+
   function startGame(){
+    //to be used between rounds, or after the game is prepared
+    clearWord();
     currentWordArr = [];
     finishedWordArr = [];
     letters = [];
@@ -201,10 +251,13 @@ function init(){
     currentCharTimer = getRandomInt(TIMER_DRAW_LOW, TIMER_DRAW_HIGH);
     currentCharState = "idle";
     playerAlive = true;
-    showMessage("Get Ready...");
+    currentRound++;
+    showMessage("Round #" + currentRound + "\nGet Ready...");
   }
 
   function animate() {
+    rS( 'frame' ).start();
+    rS( 'FPS' ).frame();
     switch (currentCharState){
       case "idle":
         if (currentCharTimer <= 0){
@@ -227,16 +280,18 @@ function init(){
         break;
       case "spent":
         //player is dead, cpu is smoking a cig
-        showMessage("You're Dead!");
+        showMessage("You're Dead!\nPress enter to try again");
         playerAlive = false;
         break;
       case "dead":
-        showMessage("Nice Shot!");
+        showMessage("Nice Shot!\nPress enter for your next duel");
         break;
     }
-    console.log("animate tick: " + currentCharState + " - " + currentCharTimer);
+    rS( 'render' ).start();
     renderer.render(stage);
-    requestAnimationFrame(animate);
+    rS( 'render' ).end();
+    rS( 'frame' ).end();
+    rS().update();
   }
 
   function showMessage(message){
@@ -245,8 +300,8 @@ function init(){
       font: "50px Arial",
       fill: "black"
     });
-    msg.position.x = 100;
-    msg.position.y = 500;
+    msg.position.x = 10;
+    msg.position.y = 580;
     messages.push(msg);
     messageContainer.addChild(msg);
   }
