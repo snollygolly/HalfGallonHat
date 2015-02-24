@@ -201,6 +201,7 @@ function init(){
     currentCharTimer = getRandomInt(TIMER_DRAW_LOW, TIMER_DRAW_HIGH);
     currentCharState = "idle";
     playerAlive = true;
+    showMessage("Get Ready...");
   }
 
   function animate() {
@@ -226,7 +227,7 @@ function init(){
         break;
       case "spent":
         //player is dead, cpu is smoking a cig
-        showMessage("You're dead!");
+        showMessage("You're Dead!");
         playerAlive = false;
         break;
       case "dead":
