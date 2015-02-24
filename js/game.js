@@ -5,7 +5,7 @@ var LETTER_SIZE = 258;
 var LETTER_SCALE = .25;
 var TRUE_LETTER_SIZE = LETTER_SIZE * LETTER_SCALE;
 
-var words = ["BUCKAROO", "CHUCK WAGON"];
+var words = ["BUCKAROO", "CHUCK WAGON", "BRITCHES", "BRONCO", "BUSHWHACKER", "CAMPFIRE", "CATTLE DRIVE", "COWBOY", "DROUGHT", "FISTICUFFS", "FRONTIER", "GALLOP", "GAUCHO", "GIDDYUP", "GOLD FEVER", "HOGTIE", "HORSESHOES", "LARIAT", "LASSO", "LIVESTOCK", "LONGHORNS", "MARKSMEN", "MAVERICK", "OUTLAW", "PACKHORSE", "PEACEMAKER", "PONIES", "SADDLEBAGS", "SALOON", "SHERIFF", "STALLION", "STOCKADE", "TOMBSTONE", "UNSCRUPULOUS", "VAMOOSE", "VARMINT", "VULTURES", "WRANGLER", "YEE HAW", "YONDER"];
 var currentWordArr = [];
 var finishedWordArr = [];
 
@@ -16,14 +16,14 @@ var X_TIMER_DRAW_LOW = 1500;
 var X_TIMER_DRAW_HIGH = 3000;
 //word complete timer is the amount of time it takes the cpu char to shoot
 //after he has begun to draw his weapon
-var X_TIMER_WORD_COMPLETE = 3000;
+var X_TIME_PER_LETTER = 300;
 
 //how many ms are in one frame?
 var FRAME_TO_MS = 1000 / FPS;
 //automatically convert, don't touch
 var TIMER_DRAW_LOW = Math.ceil(X_TIMER_DRAW_LOW / FRAME_TO_MS);
 var TIMER_DRAW_HIGH = Math.ceil(X_TIMER_DRAW_HIGH / FRAME_TO_MS);
-var TIMER_WORD_COMPLETE = Math.ceil(X_TIMER_WORD_COMPLETE / FRAME_TO_MS);
+var TIME_PER_LETTER = Math.ceil(X_TIME_PER_LETTER / FRAME_TO_MS);
 
 //the current timer
 var currentCharTimer;
@@ -116,11 +116,9 @@ function init(){
     button.interactive = true;
 
     button.click = function(data) {
-        console.log("CLICK!");
         prepareGame();
     };
     button.tap = function(data) {
-        console.log("TAP!!");
         prepareGame();
     };
 
@@ -153,7 +151,6 @@ function init(){
   }
 
   function createLetter(letterChar, x){
-    console.log("creating letter with: " + letterChar + " @ x: " + x);
     var letter = PIXI.Sprite.fromFrame(letterChar + ".png");
     letter.width = letter.height = TRUE_LETTER_SIZE;
     letter.position.x = x;
@@ -173,7 +170,6 @@ function init(){
 
   function handleInput(key){
     //if the CPU char hasn't started to shoot, don't type
-    console.log("input: key: " + key + " - state: " + currentCharState);
     //space trapping for menu stuff
     if (currentCharState == "spent" && key == 13){
       resetGame();
@@ -198,14 +194,11 @@ function init(){
       char = "-";
     }
     var index = finishedWordArr.length;
-    console.log("index: " + index + " - char: (" + char + ") == currentWordArr[index]: (" + currentWordArr[index] + ")");
     if (char == currentWordArr[index]){
       swapLetter(index);
-      console.log("match! " + char);
     }
     if (currentWordArr.length == finishedWordArr.length){
       //they've matched the entire word
-      console.log("clearing word");
       currentCharState = "dead";
     }
   }
@@ -230,7 +223,6 @@ function init(){
     //just in case
     clearInterval(animator);
     animator = setInterval(animate, FPS);
-    console.log("set animator");
     resetGame();
     startGame();
   }
@@ -263,7 +255,9 @@ function init(){
         if (currentCharTimer <= 0){
           //they should draw now!
           showMessage("Draw!");
-          currentCharTimer = TIMER_WORD_COMPLETE;
+          currentCharTimer = ((TIME_PER_LETTER * currentWordArr.length) - ((TIME_PER_LETTER / 10) * currentRound));
+          console.log("draw: T_P_L: " + TIME_PER_LETTER + "* word.length: " + currentWordArr.length + " - (" + (TIME_PER_LETTER * currentWordArr.length) + ")");
+          console.log("difficulty (bigger is harder): " + ((TIME_PER_LETTER / 10) * currentRound));
           currentCharState = "drawing";
         }else{
           currentCharTimer--;
