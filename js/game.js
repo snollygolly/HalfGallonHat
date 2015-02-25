@@ -1,6 +1,4 @@
 var FPS = 30;
-var WIDTH = 1024;
-var HEIGHT = 768;
 var LETTER_SIZE = 258;
 var LETTER_SCALE = .25;
 var TRUE_LETTER_SIZE = LETTER_SIZE * LETTER_SCALE;
@@ -37,16 +35,6 @@ var currentRound = 0;
 //the players score
 var currentScore = 0;
 
-// create an array of assets to load
-var assetsToLoader = [
-  "img/letters/yellow-letters.json",
-  "img/letters/solid-letters.json",
-  "img/desert-bg.jpg",
-  "img/character_1_stand.png",
-  "img/intro-text.png",
-  "img/start-button.png"
-];
-
 var letters = [];
 var messages = [];
 var letterContainer = new PIXI.DisplayObjectContainer();
@@ -63,13 +51,17 @@ var animator;
 function init(){
   Engine.init();
 
+  //when the engine has loaded all the sprites and is ready...
+  $(Engine).on("ready", function(){
+    prepareGame();
+  });
+  //when the user presses a key...
   $(Engine).on("keypress", function(e, code){
     handleInput(code);
   });
-
-  $(Engine).on("ready", function(){
-    console.log("prepared fired");
-    prepareGame();
+  //when a frame is ready to be animated
+  $(Engine).on("frame", function(){
+    animate();
   });
 }
 
@@ -120,9 +112,8 @@ function prepareGame(){
   Engine.stage.addChild(messageContainer);
   //to be used when entering the game from the main menu
   Engine.hideMenu();
-  //just in case
-  clearInterval(animator);
-  animator = setInterval(animate, FPS);
+  //behind the scenes, we stop it as well for safety
+  Engine.startAnimation();
   resetGame();
   startGame();
 }
@@ -192,8 +183,6 @@ function clearWord(){
 }
 
 function animate() {
-  rS( 'frame' ).start();
-  rS( 'FPS' ).frame();
   switch (currentCharState){
     case "idle":
       if (currentCharTimer <= 0){
@@ -226,11 +215,6 @@ function animate() {
       currentScore += currentWordArr.length + currentRound;
       break;
   }
-  rS( 'render' ).start();
-  Engine.renderer.render(Engine.stage);
-  rS( 'render' ).end();
-  rS( 'frame' ).end();
-  rS().update();
 }
 
 function showMessage(message){

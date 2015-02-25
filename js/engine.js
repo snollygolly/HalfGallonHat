@@ -1,4 +1,6 @@
 var Engine = {
+  FPS: 30,
+  FRAME_TO_MS: 1000 / this.FPS,
   WIDTH: 1024,
   HEIGHT: 768,
 
@@ -38,6 +40,7 @@ var Engine = {
   },
   stage: null,
   renderer: null,
+  animator: null,
 
   init: function() {
     $(window).keypress(function(e) {
@@ -113,6 +116,25 @@ var Engine = {
     sprite.x = x;
     sprite.y = y;
     return sprite;
+  },
+  startAnimation: function() {
+    Engine.stopAnimation();
+    Engine.animator = setInterval(Engine.animate, Engine.FPS);
+  },
+  stopAnimation: function() {
+    clearInterval(Engine.animator);
+  },
+  animate: function() {
+    rS( 'frame' ).start();
+    rS( 'FPS' ).frame();
+    //trigger the frame for anyone watching
+    $(Engine).trigger("frame");
+    rS( 'render' ).start();
+    //render the stage
+    Engine.renderer.render(Engine.stage);
+    rS( 'render' ).end();
+    rS( 'frame' ).end();
+    rS().update();
   },
 
   utility: {
