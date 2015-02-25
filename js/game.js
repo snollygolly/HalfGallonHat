@@ -61,256 +61,193 @@ messageContainer.position.y = 0;
 var animator;
 
 function init(){
-  $(function() {
-    $(window).keypress(function(e) {
-        var code = e.which;
-        if (((code >= 65) && (code <= 90)) || ((code >= 97) && (code <= 122)) || code == 32 || code == 13) {
-          handleInput(code);
-        }
-    });
+  Engine.init();
+
+  $(Engine).on("keypress", function(e, code){
+    handleInput(code);
   });
 
-  var renderer = new PIXI.autoDetectRenderer(WIDTH, HEIGHT);
+  $(Engine).on("ready", function(){
+    console.log("prepared fired");
+    prepareGame();
+  });
+}
 
-  document.body.appendChild(renderer.view);
+function createSprite(path, x, y){
+  var sprite = PIXI.Sprite.fromImage(path);
+  sprite.x = x;
+  sprite.y = y;
+  return sprite;
+}
 
-  stage = new PIXI.Stage;
-
-  // create a new loader
-  loader = new PIXI.AssetLoader(assetsToLoader);
-
-  // use callback
-  loader.onComplete = onAssetsLoaded
-
-  //begin load
-  loader.load();
-
-  function onAssetsLoaded(){
-    console.log("all assets loaded");
-    rS = new rStats( {
-      values: {
-          frame: { caption: 'Total frame time (ms)' },
-          fps: { caption: 'Framerate (FPS)' },
-          render: { caption: 'WebGL Render (ms)' }
-      }
-    } );
-    //loading the background
-    bg = createSprite("img/desert-bg.jpg", 0, 0);
-
-    //add the character
-    char = createSprite("img/character_1_stand.png", 0, 0);
-
-    //add the text
-    text = createSprite("img/intro-text.png", 0, 0);
-
-    //add the button
-    button = createSprite("img/start-button.png", 100, 500);
-    // make the button interactive..
-    button.interactive = true;
-
-    //event listeners for the button
-    button.click = function(data) {
-        prepareGame();
-    };
-    button.tap = function(data) {
-        prepareGame();
-    };
-
-    prepareStage();
-  }
-
-  function createSprite(path, x, y){
-    var sprite = PIXI.Sprite.fromImage(path);
-    sprite.x = x;
-    sprite.y = y;
-    return sprite;
-  }
-
-  function drawWord(word){
-    //replace spaces with underscores
-    word = word.replace(/ /g, "-");
-    currentWordArr = wordArr = word.split("");
-    for (var i = 0; i < word.length; i++)
-    {
-      // create an letter using the frame name.
-      var letter = createLetter(wordArr[i].toLowerCase(), (TRUE_LETTER_SIZE * i));
-      letters.push(letter);
-      letterContainer.addChild(letter);
-    }
-  }
-
-  function swapLetter(index){
-    //this replaces unfilled letters with filled letters
-    var x = letters[index].position.x;
-    var letterChar = letters[index].character;
-    if (letterChar == "-"){letterChar = "_";}
-    letterContainer.removeChild(letters[index]);
-    var letter = createLetter(letterChar.toUpperCase(), x);
-    letterContainer.addChild(letter);
-    letters[index] = letter;
-    finishedWordArr.push(letterChar);
-  }
-
-  function createLetter(letterChar, x){
-    var letter = PIXI.Sprite.fromFrame(letterChar + ".png");
-    letter.width = letter.height = TRUE_LETTER_SIZE;
-    letter.position.x = x;
-    letter.position.y = 700;
-    letter.anchor.x = 0;
-    letter.anchor.y = 0;
-    letter.character = letterChar;
-    return letter;
-  }
-
-  function clearWord(){
-    while (letters.length != 0){
-      var letter = letters.pop();
-      letterContainer.removeChild(letter);
-    }
-  }
-
-  function handleInput(key){
-    //if the CPU char hasn't started to shoot, don't type
-    //space trapping for menu stuff
-    if (currentCharState == "spent" && key == 13){
-      resetGame();
-      startGame();
-      return;
-    }
-    if (currentCharState == "dead" && key == 13){
-      startGame();
-      return;
-    }
-    //enter doesn't get trapped normally
-    if (key == 13){
-      return;
-    }
-    //anything else is something we don't care about
-    if (currentCharState != "drawing"){
-      return;
-    }
-    var char = String.fromCharCode(key).toUpperCase();
-    if (char == " "){
-      //trap the space
-      char = "-";
-    }
-    var index = finishedWordArr.length;
-    if (char == currentWordArr[index]){
-      swapLetter(index);
-    }
-    if (currentWordArr.length == finishedWordArr.length){
-      //they've matched the entire word
-      currentCharState = "dead";
-    }
-  }
-
-  function prepareStage(){
-    //used to set the main menu
-    stage.addChild(bg);
-    stage.addChild(char);
-    stage.addChild(text);
-    stage.addChild(button);
-    //add the containers
-    stage.addChild(letterContainer);
-    stage.addChild(messageContainer);
-    //draw it on the stage
-    renderer.render(stage);
-  }
-
-  function prepareGame(){
-    //to be used when entering the game from the main menu
-    stage.removeChild(button);
-    stage.removeChild(text);
-    //just in case
-    clearInterval(animator);
-    animator = setInterval(animate, FPS);
+function handleInput(key){
+  //if the CPU char hasn't started to shoot, don't type
+  //space trapping for menu stuff
+  if (currentCharState == "spent" && key == 13){
     resetGame();
     startGame();
+    return;
   }
-
-  function resetGame(){
-    //to get a blank slate after being init-ed
-    currentRound = 0;
-    currentScore = 0;
+  if (currentCharState == "dead" && key == 13){
+    startGame();
+    return;
   }
-
-  function startGame(){
-    //to be used between rounds, or after the game is prepared
-    clearWord();
-    currentWordArr = [];
-    finishedWordArr = [];
-    letters = [];
-    drawWord(words[getRandomInt(0, words.length - 1)]);
-    //set up a random time for the draw timer
-    currentCharTimer = getRandomInt(TIMER_DRAW_LOW, TIMER_DRAW_HIGH);
-    currentCharState = "idle";
-    playerAlive = true;
-    currentRound++;
-    showMessage("Round #" + currentRound + "\nGet Ready...");
+  //enter doesn't get trapped normally
+  if (key == 13){
+    return;
   }
-
-  function animate() {
-    rS( 'frame' ).start();
-    rS( 'FPS' ).frame();
-    switch (currentCharState){
-      case "idle":
-        if (currentCharTimer <= 0){
-          //they should draw now!
-          showMessage("Draw!");
-          currentCharTimer = ((TIME_PER_LETTER * currentWordArr.length) - ((TIME_PER_LETTER / 10) * currentRound));
-          console.log("draw: T_P_L: " + TIME_PER_LETTER + "* word.length: " + currentWordArr.length + " - (" + (TIME_PER_LETTER * currentWordArr.length) + ")");
-          console.log("difficulty (bigger is harder): " + ((TIME_PER_LETTER / 10) * currentRound));
-          currentCharState = "drawing";
-        }else{
-          currentCharTimer--;
-        }
-        break;
-      case "drawing":
-        if (currentCharTimer <= 0){
-          showMessage("Bang!");
-          //they should shoot now
-          currentCharState = "spent";
-        }else{
-          currentCharTimer--;
-        }
-        break;
-      case "spent":
-        //player is dead, cpu is smoking a cig
-        showMessage("You're Dead! Score: " + currentScore + "\nPress enter to try again");
-        playerAlive = false;
-        break;
-      case "dead":
-        showMessage("Nice Shot!\nPress enter for your next duel");
-        currentScore += currentWordArr.length + currentRound;
-        break;
-    }
-    rS( 'render' ).start();
-    renderer.render(stage);
-    rS( 'render' ).end();
-    rS( 'frame' ).end();
-    rS().update();
+  //anything else is something we don't care about
+  if (currentCharState != "drawing"){
+    return;
   }
-
-  function showMessage(message){
-    clearMessage();
-    var msg = new PIXI.Text(message, {
-      font: "50px Arial",
-      fill: "black"
-    });
-    msg.position.x = 10;
-    msg.position.y = 580;
-    messages.push(msg);
-    messageContainer.addChild(msg);
+  var char = String.fromCharCode(key).toUpperCase();
+  if (char == " "){
+    //trap the space
+    char = "-";
   }
-
-  function clearMessage(){
-    while (messages.length != 0){
-      var message = messages.pop();
-      messageContainer.removeChild(message);
-    }
+  var index = finishedWordArr.length;
+  if (char == currentWordArr[index]){
+    swapLetter(index);
   }
+  if (currentWordArr.length == finishedWordArr.length){
+    //they've matched the entire word
+    currentCharState = "dead";
+  }
+}
 
-  function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+function prepareGame(){
+  Engine.stage.addChild(letterContainer);
+  Engine.stage.addChild(messageContainer);
+  //to be used when entering the game from the main menu
+  Engine.hideMenu();
+  //just in case
+  clearInterval(animator);
+  animator = setInterval(animate, FPS);
+  resetGame();
+  startGame();
+}
+
+function startGame(){
+  //to be used between rounds, or after the game is prepared
+  clearWord();
+  currentWordArr = [];
+  finishedWordArr = [];
+  letters = [];
+  drawWord(words[Engine.utility.getRandomInt(0, words.length - 1)]);
+  //set up a random time for the draw timer
+  currentCharTimer = Engine.utility.getRandomInt(TIMER_DRAW_LOW, TIMER_DRAW_HIGH);
+  currentCharState = "idle";
+  playerAlive = true;
+  currentRound++;
+  showMessage("Round #" + currentRound + "\nGet Ready...");
+}
+
+function resetGame(){
+  //to get a blank slate after being init-ed
+  currentRound = 0;
+  currentScore = 0;
+}
+
+function drawWord(word){
+  //replace spaces with underscores
+  word = word.replace(/ /g, "-");
+  currentWordArr = wordArr = word.split("");
+  for (var i = 0; i < word.length; i++)
+  {
+    // create an letter using the frame name.
+    var letter = createLetter(wordArr[i].toLowerCase(), (TRUE_LETTER_SIZE * i));
+    letters.push(letter);
+    letterContainer.addChild(letter);
+  }
+}
+
+function createLetter(letterChar, x){
+  var letter = PIXI.Sprite.fromFrame(letterChar + ".png");
+  letter.width = letter.height = TRUE_LETTER_SIZE;
+  letter.position.x = x;
+  letter.position.y = 700;
+  letter.anchor.x = 0;
+  letter.anchor.y = 0;
+  letter.character = letterChar;
+  return letter;
+}
+
+function swapLetter(index){
+  //this replaces unfilled letters with filled letters
+  var x = letters[index].position.x;
+  var letterChar = letters[index].character;
+  if (letterChar == "-"){letterChar = "_";}
+  letterContainer.removeChild(letters[index]);
+  var letter = createLetter(letterChar.toUpperCase(), x);
+  letterContainer.addChild(letter);
+  letters[index] = letter;
+  finishedWordArr.push(letterChar);
+}
+
+function clearWord(){
+  while (letters.length != 0){
+    var letter = letters.pop();
+    letterContainer.removeChild(letter);
+  }
+}
+
+function animate() {
+  rS( 'frame' ).start();
+  rS( 'FPS' ).frame();
+  switch (currentCharState){
+    case "idle":
+      if (currentCharTimer <= 0){
+        //they should draw now!
+        showMessage("Draw!");
+        currentCharTimer = ((TIME_PER_LETTER * currentWordArr.length) - ((TIME_PER_LETTER / 10) * currentRound));
+        console.log("draw: T_P_L: " + TIME_PER_LETTER + "* word.length: " + currentWordArr.length + " - (" + (TIME_PER_LETTER * currentWordArr.length) + ")");
+        console.log("difficulty (bigger is harder): " + ((TIME_PER_LETTER / 10) * currentRound));
+        currentCharState = "drawing";
+      }else{
+        currentCharTimer--;
+      }
+      break;
+    case "drawing":
+      if (currentCharTimer <= 0){
+        showMessage("Bang!");
+        //they should shoot now
+        currentCharState = "spent";
+      }else{
+        currentCharTimer--;
+      }
+      break;
+    case "spent":
+      //player is dead, cpu is smoking a cig
+      showMessage("You're Dead! Score: " + currentScore + "\nPress enter to try again");
+      playerAlive = false;
+      break;
+    case "dead":
+      showMessage("Nice Shot!\nPress enter for your next duel");
+      currentScore += currentWordArr.length + currentRound;
+      break;
+  }
+  rS( 'render' ).start();
+  Engine.renderer.render(Engine.stage);
+  rS( 'render' ).end();
+  rS( 'frame' ).end();
+  rS().update();
+}
+
+function showMessage(message){
+  clearMessage();
+  var msg = new PIXI.Text(message, {
+    font: "50px Arial",
+    fill: "black"
+  });
+  msg.position.x = 10;
+  msg.position.y = 580;
+  messages.push(msg);
+  messageContainer.addChild(msg);
+}
+
+function clearMessage(){
+  while (messages.length != 0){
+    var message = messages.pop();
+    messageContainer.removeChild(message);
   }
 }
