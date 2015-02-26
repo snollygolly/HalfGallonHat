@@ -1,6 +1,5 @@
 var Engine = {
   FPS: 30,
-  FRAME_TO_MS: 1000 / this.FPS,
   WIDTH: 1024,
   HEIGHT: 768,
 

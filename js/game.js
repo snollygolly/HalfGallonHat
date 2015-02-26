@@ -1,4 +1,4 @@
-var FPS = 30;
+var FRAME_TO_MS = (1000 / Engine.FPS);
 var LETTER_SIZE = 258;
 var LETTER_SCALE = .25;
 var TRUE_LETTER_SIZE = LETTER_SIZE * LETTER_SCALE;
@@ -16,8 +16,6 @@ var X_TIMER_DRAW_HIGH = 3000;
 //after he has begun to draw his weapon
 var X_TIME_PER_LETTER = 300;
 
-//how many ms are in one frame?
-var FRAME_TO_MS = 1000 / FPS;
 //automatically convert, don't touch
 var TIMER_DRAW_LOW = Math.ceil(X_TIMER_DRAW_LOW / FRAME_TO_MS);
 var TIMER_DRAW_HIGH = Math.ceil(X_TIMER_DRAW_HIGH / FRAME_TO_MS);
